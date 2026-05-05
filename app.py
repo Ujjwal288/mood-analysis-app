@@ -3,10 +3,9 @@ import pandas as pd
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
+import time
 
 # ---------------- SAFE NLP SETUP ----------------
-import nltk
-
 try:
     nltk.data.find('sentiment/vader_lexicon')
 except LookupError:
@@ -16,33 +15,69 @@ sia = SentimentIntensityAnalyzer()
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="Mood Intelligence Dashboard",
-    layout="wide",
-    page_icon="🧠"
+    page_title="AI Emotion Intelligence",
+    page_icon="🧠",
+    layout="wide"
 )
 
-# ---------------- HEADER ----------------
+# ---------------- ULTRA UI STYLE ----------------
 st.markdown("""
-    <h1 style='text-align: center; color: #4CAF50;'>
-        🧠 Mood Intelligence Dashboard
-    </h1>
-    <p style='text-align: center; color: gray;'>
-        AI-powered emotional trend & mood shift analysis
-    </p>
+<style>
+
+body {
+    background-color: #0e1117;
+}
+
+.main-title {
+    font-size: 48px;
+    text-align: center;
+    font-weight: 800;
+    background: linear-gradient(90deg, #00ffe0, #7a5cff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.sub-title {
+    text-align: center;
+    color: #aaa;
+    font-size: 18px;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+}
+
+.stButton>button {
+    background: linear-gradient(90deg, #00ffe0, #7a5cff);
+    color: black;
+    font-weight: bold;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+</style>
 """, unsafe_allow_html=True)
+
+# ---------------- HEADER ----------------
+st.markdown("<div class='main-title'>🧠 AI Emotion Intelligence System</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>Ultra-premium NLP Mood Shift Detection Dashboard</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
-    st.title("📊 Control Panel")
-    st.write("Analyze your emotional patterns from daily logs.")
-    st.info("Built with Streamlit + NLP")
+    st.title("⚙️ AI Control Panel")
+    st.write("Analyze emotional patterns using advanced NLP.")
+    st.success("Powered by Streamlit + VADER NLP")
 
 # ---------------- INPUT ----------------
-st.subheader("✍️ Enter Daily Logs")
+st.subheader("✍️ Enter Your Emotional Logs")
 
-user_input = st.text_area("Write one entry per line")
+user_input = st.text_area("Type one entry per line", height=150)
 
 # ---------------- MOOD FUNCTION ----------------
 def get_mood(score):
@@ -54,13 +89,17 @@ def get_mood(score):
         return "😐 Neutral"
 
 # ---------------- ANALYSIS ----------------
-if st.button("🚀 Generate Insights"):
+if st.button("🚀 Run AI Emotion Analysis"):
 
     if not user_input.strip():
-        st.warning("Please enter logs first.")
+        st.warning("Please enter some text logs.")
     else:
 
-        logs = [l.strip() for l in user_input.split("\n") if l.strip()]
+        # ⏳ LOADING ANIMATION
+        with st.spinner("AI is analyzing emotions..."):
+            time.sleep(1.5)
+
+        logs = [x.strip() for x in user_input.split("\n") if x.strip()]
 
         data = []
         scores = []
@@ -74,33 +113,19 @@ if st.button("🚀 Generate Insights"):
 
         df = pd.DataFrame(data, columns=["Day", "Text", "Score", "Mood"])
 
-        st.markdown("## 📌 Key Insights")
+        st.markdown("## 📊 AI Dashboard Insights")
 
         # ---------------- METRIC CARDS ----------------
         col1, col2, col3 = st.columns(3)
 
-        col1.markdown(
-            f"<div style='padding:20px; background:#1e1e1e; border-radius:10px;'>"
-            f"<h3>Total Entries</h3><h2>{len(df)}</h2></div>",
-            unsafe_allow_html=True
-        )
-
-        col2.markdown(
-            f"<div style='padding:20px; background:#1e1e1e; border-radius:10px;'>"
-            f"<h3>Latest Mood</h3><h2>{df['Mood'].iloc[-1]}</h2></div>",
-            unsafe_allow_html=True
-        )
-
-        col3.markdown(
-            f"<div style='padding:20px; background:#1e1e1e; border-radius:10px;'>"
-            f"<h3>Avg Score</h3><h2>{round(sum(scores)/len(scores),2)}</h2></div>",
-            unsafe_allow_html=True
-        )
+        col1.markdown(f"<div class='card'><h3>📌 Total Logs</h3><h2>{len(df)}</h2></div>", unsafe_allow_html=True)
+        col2.markdown(f"<div class='card'><h3>🧠 Latest Mood</h3><h2>{df['Mood'].iloc[-1]}</h2></div>", unsafe_allow_html=True)
+        col3.markdown(f"<div class='card'><h3>📊 Avg Score</h3><h2>{round(sum(scores)/len(scores),2)}</h2></div>", unsafe_allow_html=True)
 
         st.markdown("---")
 
         # ---------------- TABLE ----------------
-        st.subheader("📊 Detailed Analysis")
+        st.subheader("📋 Emotion Analysis Table")
         st.dataframe(df, use_container_width=True)
 
         st.markdown("---")
@@ -109,23 +134,20 @@ if st.button("🚀 Generate Insights"):
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("📈 Mood Trend")
-
+            st.subheader("📈 Emotion Trend AI Graph")
             fig, ax = plt.subplots()
-            ax.plot(range(1, len(scores)+1), scores, marker="o")
-            ax.axhline(0, linestyle="--")
+            ax.plot(range(1, len(scores)+1), scores, marker="o", linewidth=2)
+            ax.axhline(0, linestyle="--", color="gray")
             st.pyplot(fig)
 
         with col2:
             st.subheader("📊 Mood Distribution")
-
-            mood_counts = df["Mood"].value_counts()
-            st.bar_chart(mood_counts)
+            st.bar_chart(df["Mood"].value_counts())
 
         st.markdown("---")
 
         # ---------------- SHIFT DETECTION ----------------
-        st.subheader("⚡ Mood Shift Detection")
+        st.subheader("⚡ AI Mood Shift Engine")
 
         shifts = []
         for i in range(1, len(scores)):
@@ -133,16 +155,18 @@ if st.button("🚀 Generate Insights"):
                 shifts.append(i+1)
 
         if shifts:
-            st.error(f"Mood shifts detected on Day(s): {shifts}")
+            st.error(f"⚠ Significant emotional shifts detected on Day(s): {shifts}")
         else:
-            st.success("Stable emotional pattern detected")
+            st.success("Emotional pattern is stable ✅")
+
+        st.markdown("---")
 
         # ---------------- DOWNLOAD ----------------
         csv = df.to_csv(index=False).encode("utf-8")
 
         st.download_button(
-            "📥 Download Report",
+            "📥 Download AI Report",
             data=csv,
-            file_name="mood_report.csv",
+            file_name="ultra_ai_mood_report.csv",
             mime="text/csv"
         )
