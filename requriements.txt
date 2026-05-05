@@ -1,5 +1,5 @@
 streamlit
-textblob
+textblob==0.17.1
 pandas
 plotly
 nltk
