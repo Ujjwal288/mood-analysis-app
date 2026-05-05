@@ -3,6 +3,10 @@ import pandas as pd
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
+
+# ---------------- SAFE NLP SETUP ----------------
+import nltk
+
 try:
     nltk.data.find('sentiment/vader_lexicon')
 except LookupError:
@@ -10,35 +14,37 @@ except LookupError:
 
 sia = SentimentIntensityAnalyzer()
 
-# ------------------ PAGE CONFIG ------------------
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="Mood Shift Dashboard",
+    page_title="Mood Intelligence Dashboard",
     layout="wide",
-    initial_sidebar_state="expanded"
+    page_icon="🧠"
 )
 
-# ------------------ HEADER ------------------
-st.title("🧠 Mood Shift Detection Dashboard")
-st.markdown("Analyze daily emotions using NLP sentiment analysis")
+# ---------------- HEADER ----------------
+st.markdown("""
+    <h1 style='text-align: center; color: #4CAF50;'>
+        🧠 Mood Intelligence Dashboard
+    </h1>
+    <p style='text-align: center; color: gray;'>
+        AI-powered emotional trend & mood shift analysis
+    </p>
+""", unsafe_allow_html=True)
 
-st.divider()
+st.markdown("---")
 
-# ------------------ SIDEBAR ------------------
+# ---------------- SIDEBAR ----------------
 with st.sidebar:
-    st.header("📌 Instructions")
-    st.write("""
-    1. Enter daily logs (one per line)
-    2. Click Analyze
-    3. View mood trends & shifts
-    """)
-    st.info("Built using Streamlit + NLTK")
+    st.title("📊 Control Panel")
+    st.write("Analyze your emotional patterns from daily logs.")
+    st.info("Built with Streamlit + NLP")
 
-# ------------------ INPUT ------------------
+# ---------------- INPUT ----------------
 st.subheader("✍️ Enter Daily Logs")
 
-user_input = st.text_area("Write your logs here:")
+user_input = st.text_area("Write one entry per line")
 
-# ------------------ FUNCTION ------------------
+# ---------------- MOOD FUNCTION ----------------
 def get_mood(score):
     if score >= 0.05:
         return "😊 Happy"
@@ -47,12 +53,13 @@ def get_mood(score):
     else:
         return "😐 Neutral"
 
-# ------------------ ANALYZE ------------------
-if st.button("🚀 Analyze Mood"):
+# ---------------- ANALYSIS ----------------
+if st.button("🚀 Generate Insights"):
 
     if not user_input.strip():
-        st.warning("Please enter some logs.")
+        st.warning("Please enter logs first.")
     else:
+
         logs = [l.strip() for l in user_input.split("\n") if l.strip()]
 
         data = []
@@ -67,34 +74,46 @@ if st.button("🚀 Analyze Mood"):
 
         df = pd.DataFrame(data, columns=["Day", "Text", "Score", "Mood"])
 
-        st.divider()
+        st.markdown("## 📌 Key Insights")
 
-        # ------------------ TOP METRICS ------------------
+        # ---------------- METRIC CARDS ----------------
         col1, col2, col3 = st.columns(3)
 
-        col1.metric("Total Entries", len(df))
-        col2.metric("Most Recent Mood", df["Mood"].iloc[-1])
-        col3.metric("Avg Sentiment", round(sum(scores)/len(scores), 2))
+        col1.markdown(
+            f"<div style='padding:20px; background:#1e1e1e; border-radius:10px;'>"
+            f"<h3>Total Entries</h3><h2>{len(df)}</h2></div>",
+            unsafe_allow_html=True
+        )
 
-        st.divider()
+        col2.markdown(
+            f"<div style='padding:20px; background:#1e1e1e; border-radius:10px;'>"
+            f"<h3>Latest Mood</h3><h2>{df['Mood'].iloc[-1]}</h2></div>",
+            unsafe_allow_html=True
+        )
 
-        # ------------------ TABLE ------------------
-        st.subheader("📊 Analysis Table")
+        col3.markdown(
+            f"<div style='padding:20px; background:#1e1e1e; border-radius:10px;'>"
+            f"<h3>Avg Score</h3><h2>{round(sum(scores)/len(scores),2)}</h2></div>",
+            unsafe_allow_html=True
+        )
+
+        st.markdown("---")
+
+        # ---------------- TABLE ----------------
+        st.subheader("📊 Detailed Analysis")
         st.dataframe(df, use_container_width=True)
 
-        st.divider()
+        st.markdown("---")
 
-        # ------------------ CHARTS ------------------
+        # ---------------- CHARTS ----------------
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("📈 Sentiment Trend")
+            st.subheader("📈 Mood Trend")
 
             fig, ax = plt.subplots()
             ax.plot(range(1, len(scores)+1), scores, marker="o")
             ax.axhline(0, linestyle="--")
-            ax.set_xlabel("Day")
-            ax.set_ylabel("Sentiment Score")
             st.pyplot(fig)
 
         with col2:
@@ -103,9 +122,9 @@ if st.button("🚀 Analyze Mood"):
             mood_counts = df["Mood"].value_counts()
             st.bar_chart(mood_counts)
 
-        st.divider()
+        st.markdown("---")
 
-        # ------------------ MOOD SHIFT ------------------
+        # ---------------- SHIFT DETECTION ----------------
         st.subheader("⚡ Mood Shift Detection")
 
         shifts = []
@@ -114,13 +133,11 @@ if st.button("🚀 Analyze Mood"):
                 shifts.append(i+1)
 
         if shifts:
-            st.error(f"Significant mood shifts detected on Day(s): {shifts}")
+            st.error(f"Mood shifts detected on Day(s): {shifts}")
         else:
-            st.success("No major mood shifts detected")
+            st.success("Stable emotional pattern detected")
 
-        st.divider()
-
-        # ------------------ DOWNLOAD ------------------
+        # ---------------- DOWNLOAD ----------------
         csv = df.to_csv(index=False).encode("utf-8")
 
         st.download_button(
