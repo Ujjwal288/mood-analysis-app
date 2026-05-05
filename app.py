@@ -3,8 +3,10 @@ import pandas as pd
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
-
-nltk.download('vader_lexicon')
+try:
+    nltk.data.find('sentiment/vader_lexicon')
+except LookupError:
+    nltk.download('vader_lexicon')
 
 sia = SentimentIntensityAnalyzer()
 
