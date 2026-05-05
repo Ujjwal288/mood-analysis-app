@@ -1,112 +1,129 @@
 import streamlit as st
-from textblob import TextBlob
 import pandas as pd
-import plotly.express as px
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+import matplotlib.pyplot as plt
 
-# Page setup
-st.set_page_config(page_title="Mood Analytics Dashboard", layout="wide")
+nltk.download('vader_lexicon')
 
-# ---- Custom UI Styling ----
-st.markdown("""
-<style>
-.main {
-    background-color: #0e1117;
-}
-h1, h2, h3 {
-    color: white;
-}
-.stTextArea textarea {
-    background-color: #262730;
-    color: white;
-}
-</style>
-""", unsafe_allow_html=True)
+sia = SentimentIntensityAnalyzer()
 
-st.title("🧠 Mood Analytics Dashboard")
+# ------------------ PAGE CONFIG ------------------
+st.set_page_config(
+    page_title="Mood Shift Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# ---- Mood Classification Function ----
-def classify_mood(p):
-    if p > 0.3:
-        return "Happy"
-    elif p >= -0.3:
-        return "Neutral"
-    elif p >= -0.6:
-        return "Sad"
-    else:
-        return "Angry/Anxious"
+# ------------------ HEADER ------------------
+st.title("🧠 Mood Shift Detection Dashboard")
+st.markdown("Analyze daily emotions using NLP sentiment analysis")
 
-# ---- Sidebar Controls ----
-st.sidebar.header("⚙️ Settings")
-threshold = st.sidebar.slider("Mood Shift Threshold", 0.1, 1.0, 0.4)
+st.divider()
 
-# ---- Manual Input ----
-st.subheader("✍️ Enter Daily Log")
-text = st.text_area("Write your thoughts here...")
-
-if st.button("Analyze Mood"):
-    if text:
-        blob = TextBlob(text)
-        polarity = blob.sentiment.polarity
-        mood = classify_mood(polarity)
-
-        st.success(f"Detected Mood: {mood}")
-        st.info(f"Polarity Score: {polarity:.2f}")
-    else:
-        st.warning("Please enter some text!")
-
-# ---- File Upload ----
-st.subheader("📂 Upload CSV File")
-file = st.file_uploader("Upload CSV with column name 'text'", type=["csv"])
-
-if file:
-    df = pd.read_csv(file)
-
-    results = []
-
-    for t in df['text']:
-        blob = TextBlob(str(t))
-        polarity = blob.sentiment.polarity
-        mood = classify_mood(polarity)
-        results.append({"text": t, "polarity": polarity, "mood": mood})
-
-    result_df = pd.DataFrame(results)
-
-    # ---- Metrics ----
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Entries", len(result_df))
-    col2.metric("Average Polarity", round(result_df['polarity'].mean(), 2))
-    col3.metric("Most Common Mood", result_df['mood'].mode()[0])
-
-    # ---- Mood Trend Graph ----
-    st.subheader("📈 Mood Trend")
-    fig = px.line(result_df, y="polarity", markers=True)
-    st.plotly_chart(fig, use_container_width=True)
-
-    # ---- Mood Shift Detection ----
-    shifts = []
-    for i in range(1, len(result_df)):
-        if abs(result_df['polarity'][i] - result_df['polarity'][i-1]) > threshold:
-            shifts.append(i)
-
-    if shifts:
-        st.error(f"⚠️ Mood Shifts Detected: {len(shifts)}")
-    else:
-        st.success("No significant mood shifts detected")
-
-    # ---- Mood Distribution ----
-    st.subheader("📊 Mood Distribution")
-    fig2 = px.bar(result_df['mood'].value_counts())
-    st.plotly_chart(fig2, use_container_width=True)
-
-    # ---- Data Table ----
-    st.subheader("📋 Data Table")
-    st.dataframe(result_df)
-
-    # ---- Summary ----
-    st.subheader("📝 Summary Report")
-    st.write(f"""
-    Total Logs: {len(result_df)}  
-    Average Mood Score: {round(result_df['polarity'].mean(),2)}  
-    Most Frequent Mood: {result_df['mood'].mode()[0]}  
-    Mood Shifts Detected: {len(shifts)}  
+# ------------------ SIDEBAR ------------------
+with st.sidebar:
+    st.header("📌 Instructions")
+    st.write("""
+    1. Enter daily logs (one per line)
+    2. Click Analyze
+    3. View mood trends & shifts
     """)
+    st.info("Built using Streamlit + NLTK")
+
+# ------------------ INPUT ------------------
+st.subheader("✍️ Enter Daily Logs")
+
+user_input = st.text_area("Write your logs here:")
+
+# ------------------ FUNCTION ------------------
+def get_mood(score):
+    if score >= 0.05:
+        return "😊 Happy"
+    elif score <= -0.05:
+        return "😔 Sad"
+    else:
+        return "😐 Neutral"
+
+# ------------------ ANALYZE ------------------
+if st.button("🚀 Analyze Mood"):
+
+    if not user_input.strip():
+        st.warning("Please enter some logs.")
+    else:
+        logs = [l.strip() for l in user_input.split("\n") if l.strip()]
+
+        data = []
+        scores = []
+
+        for i, log in enumerate(logs):
+            score = sia.polarity_scores(log)["compound"]
+            mood = get_mood(score)
+
+            data.append([i+1, log, round(score, 3), mood])
+            scores.append(score)
+
+        df = pd.DataFrame(data, columns=["Day", "Text", "Score", "Mood"])
+
+        st.divider()
+
+        # ------------------ TOP METRICS ------------------
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric("Total Entries", len(df))
+        col2.metric("Most Recent Mood", df["Mood"].iloc[-1])
+        col3.metric("Avg Sentiment", round(sum(scores)/len(scores), 2))
+
+        st.divider()
+
+        # ------------------ TABLE ------------------
+        st.subheader("📊 Analysis Table")
+        st.dataframe(df, use_container_width=True)
+
+        st.divider()
+
+        # ------------------ CHARTS ------------------
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("📈 Sentiment Trend")
+
+            fig, ax = plt.subplots()
+            ax.plot(range(1, len(scores)+1), scores, marker="o")
+            ax.axhline(0, linestyle="--")
+            ax.set_xlabel("Day")
+            ax.set_ylabel("Sentiment Score")
+            st.pyplot(fig)
+
+        with col2:
+            st.subheader("📊 Mood Distribution")
+
+            mood_counts = df["Mood"].value_counts()
+            st.bar_chart(mood_counts)
+
+        st.divider()
+
+        # ------------------ MOOD SHIFT ------------------
+        st.subheader("⚡ Mood Shift Detection")
+
+        shifts = []
+        for i in range(1, len(scores)):
+            if abs(scores[i] - scores[i-1]) > 0.5:
+                shifts.append(i+1)
+
+        if shifts:
+            st.error(f"Significant mood shifts detected on Day(s): {shifts}")
+        else:
+            st.success("No major mood shifts detected")
+
+        st.divider()
+
+        # ------------------ DOWNLOAD ------------------
+        csv = df.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            "📥 Download Report",
+            data=csv,
+            file_name="mood_report.csv",
+            mime="text/csv"
+        )
